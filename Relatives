@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>កម្មវិធីគ្រប់គ្រងព័ត៌មានមនុស្ស (Google Sheet)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- កែសម្រួល៖ បន្ថែមហ្វុង 'Moul' សម្រាប់ជាហ្វុងឆ្លាក់ -->
+    <link href="https://fonts.googleapis.com/css2?family=Koulen&family=Moul&family=Noto+Sans+Khmer:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans Khmer', sans-serif;
+        }
+        h1, .font-koulen {
+            font-family: 'Koulen', sans-serif;
+        }
+        /* បន្ថែម៖ ហ្វុង Moul */
+        .font-moul {
+            font-family: 'Moul', cursive;
+        }
+
+        /* Loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* បន្ថែម៖ រចនាបថសម្រាប់អក្សររត់ (Marquee) */
+        .marquee-container {
+            overflow: hidden;
+            background-color: #f0f9ff; /* ពណ៌ផ្ទៃខៀវខ្ចី */
+            color: #0c4a6e; /* ពណ៌អក្សរខៀវចាស់ */
+        }
+        .marquee-text {
+            display: inline-block;
+            white-space: nowrap;
+            padding-left: 100%;
+            animation: marquee 20s linear infinite;
+        }
+        @keyframes marquee {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        /* ថ្មី៖ រចនាបថសម្រាប់ Toast Notification */
+        #toastContainer {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 50;
+        }
+        .toast {
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            color: white;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            transform: translateY(-20px);
+            max-width: 300px;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.error {
+            background-color: #ef4444; /* red-500 */
+        }
+        .toast.success {
+            background-color: #10b981; /* emerald-500 */
+        }
+
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+            <!-- កែសម្រួល៖ ប្រើ .font-moul សម្រាប់ចំណងជើង -->
+            <h1 class="text-3xl md:text-4xl text-center sm:text-left text-gray-700 font-moul">កម្មវិធីគ្រប់គ្រងព័ត៌មានមនុស្ស</h1>
+            <button id="toggleBtn" class="w-full sm:w-auto bg-gray-500 text-white font-semibold px-6 py-2 rounded-lg hover:bg-gray-600 transition duration-300">លាក់</button>
+        </div>
+
+        <!-- បន្ថែម៖ អក្សររត់ (Marquee) -->
+        <div class="bg-white rounded-lg shadow-md mb-6 marquee-container">
+            <p class="marquee-text text-lg font-semibold p-3">
+                មេគ្រួសាររបស់ឧ​បាសក តាក់ សុខ និងឧបាសិកា ឌិន ហឿន
+            </p>
+        </div>
+        
+        <!-- Main Navigation -->
+        <div class="bg-white p-4 rounded-lg shadow-md mb-6 flex flex-wrap gap-4">
+            <button id="homePageLink" class="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-300">ទំព័រដើម</button>
+            <button id="page2Link" class="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-300">ទំព័រទី ២</button>
+            <button id="generateReportBtn" class="w-full sm:w-auto bg-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-green-700 transition duration-300 flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zM4.636 4.636a1 1 0 011.414 0L6.75 5.75a1 1 0 01-1.414 1.414L4.636 6.05a1 1 0 010-1.414zm8.636 0a1 1 0 010 1.414L13.25 6.75a1 1 0 01-1.414-1.414L12.727 4.636a1 1 0 011.414 0zM17 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM3 10a1 1 0 01-1 1H1a1 1 0 110-2h1a1 1 0 011 1zM15.364 15.364a1 1 0 01-1.414 0L13.25 14.25a1 1 0 111.414-1.414l1.114 1.114a1 1 0 010 1.414zM4.636 15.364a1 1 0 010-1.414L5.75 13.25a1 1 0 111.414 1.414l-1.114 1.114a1 1 0 01-1.414 0z" />
+                </svg>
+                បង្កើតរបាយការណ៍ HTML
+            </button>
+            <button id="exportCsvBtn" class="w-full sm:w-auto bg-yellow-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-yellow-700 transition duration-300 flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L10 11.586l2.293-2.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v7a1 1 0 11-2 0V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                ទាញយកជា CSV
+            </button>
+        </div>
+
+        <div id="homePageContent">
+
+            <!-- Google Sheet URL Input (Modified to include Toggle Button) -->
+            <div id="urlInputContainer" class="bg-white p-4 rounded-lg shadow-md mb-6">
+                <!-- Header/Control Row for Toggle -->
+                <div class="flex justify-between items-center mb-2">
+                    <label for="sheetUrlInput" class="block text-gray-700 font-medium">Google Sheet CSV URL:</label>
+                    <button id="toggleUrlInputBtn" class="bg-gray-200 text-gray-700 text-sm font-medium px-3 py-1 rounded-lg hover:bg-gray-300 transition duration-300">
+                        លាក់
+                    </button>
+                </div>
+
+                <!-- Content to be Toggled -->
+                <div id="urlInputContent">
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <!-- លុប value="..." ចេញ ដើម្បីបង្ខំឲ្យអ្នកប្រើប្រាស់បញ្ចូល URL ថ្មី -->
+                        <input type="url" id="sheetUrlInput" placeholder="បិទភ្ជាប់ URL នៃ CSV ដែលបាន publish" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="loadDataBtn" class="w-full sm:w-auto bg-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-green-700 transition duration-300 flex items-center justify-center gap-2"
+                            title="ទាញយកទិន្នន័យពី Google Sheet">
+                            <span id="loadDataBtnText">ទាញយកទិន្នន័យ</span>
+                            <div id="loadDataSpinner" class="loader hidden"></div>
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">របៀប publish: នៅក្នុង Google Sheet, ចូលទៅ File > Share > Publish to web. ជ្រើសរើស "Comma-separated values (.csv)" រួចចុច "Publish" បន្ទាប់មក copy URL មកដាក់ទីនេះ។</p>
+                    <p class="text-sm text-red-500 mt-1">**សំខាន់:** ជួរឈរទីមួយ (Header) នៅក្នុង CSV របស់អ្នក ត្រូវតែមានឈ្មោះ `លេខរៀង`, `គោត្តនាម នាម`, និង `ផ្សេងៗ` ទើបអាចបង្ហាញទិន្នន័យបានត្រឹមត្រូវ។</p>
+                </div>
+            </div>
+
+            <!-- Controls: Search -->
+            <div class="bg-white p-4 rounded-lg shadow-md mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="relative w-full md:w-auto flex-grow">
+                    <input type="text" id="searchInput" placeholder="ស្វែងរកតាមគោត្តនាម នាម..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute top-1/2 right-3 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap justify-end w-full md:w-auto">
+                    <button id="clearSearchBtn" class="w-full sm:w-auto bg-red-500 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-600 transition duration-300">សម្អាតការស្វែងរក</button>
+                </div>
+            </div>
+
+            <!-- Person Table -->
+            <div class="bg-white rounded-lg shadow-md overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="p-4 font-semibold">លេខរៀង</th>
+                            <th class="p-4 font-semibold">គោត្តនាម នាម</th>
+                            <th class="p-4 font-semibold">ផ្សេងៗ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="personTableBody">
+                        <!-- Data will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+                <div id="noDataMessage" class="hidden text-center p-8 text-gray-500">
+                    <p>មិនទាន់មានទិន្នន័យនៅឡើយទេ! សូមពិនិត្យ URL ឬ Google Sheet របស់អ្នក។</p>
+                </div>
+                <div class="flex justify-between items-center p-4">
+                    <button id="prevPageBtn" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 disabled:opacity-50" disabled>ទំព័រមុន</button>
+                    <span id="pageInfo" class="text-sm text-gray-600"></span>
+                    <button id="nextPageBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">ទំព័របន្ទាប់</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="page2Content" class="hidden">
+            <div class="bg-white p-8 rounded-lg shadow-md">
+                <h2 class="text-2xl font-bold mb-4">នេះគឺជាទំព័រទី 2</h2>
+                <p class="text-gray-600">អ្នកអាចបន្ថែមខ្លឹមសារណាមួយដែលអ្នកចង់បាននៅទីនេះ។</p>
+                <div class="mt-4 flex justify-end">
+                    <button id="goBackBtn" class="bg-gray-500 text-white font-semibold px-6 py-2 rounded-lg hover:bg-gray-600 transition duration-300">ត្រឡប់ក្រោយ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- បន្ថែម៖ អក្សររត់ (Marquee) ផ្នែកខាងក្រោម -->
+        <div class="bg-white rounded-lg shadow-md mt-6 marquee-container">
+            <p class="marquee-text text-lg font-semibold p-3">
+                មេគ្រួសាររបស់ឧ​បាសក តាក់ សុខ និងឧបាសិកា ឌិន ហឿន
+            </p>
+        </div>
+        
+    </div>
+
+    <!-- ថ្មី៖ Toast Notification Container -->
+    <div id="toastContainer"></div>
+
+    <script type="module">
+        const searchInput = document.getElementById('searchInput');
+        const personTableBody = document.getElementById('personTableBody');
+        const noDataMessage = document.getElementById('noDataMessage');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const homePageLink = document.getElementById('homePageLink');
+        const page2Link = document.getElementById('page2Link');
+        const goBackBtn = document.getElementById('goBackBtn');
+        const homePageContent = document.getElementById('homePageContent');
+        const page2Content = document.getElementById('page2Content');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        const prevPageBtn = document.getElementById('prevPageBtn');
+        const nextPageBtn = document.getElementById('nextPageBtn');
+        const pageInfo = document.getElementById('pageInfo');
+        const generateReportBtn = document.getElementById('generateReportBtn');
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        const sheetUrlInput = document.getElementById('sheetUrlInput');
+        const loadDataBtn = document.getElementById('loadDataBtn');
+        const loadDataBtnText = document.getElementById('loadDataBtnText');
+        const loadDataSpinner = document.getElementById('loadDataSpinner');
+        
+        // ធាតុថ្មីសម្រាប់លាក់/បង្ហាញ URL Input
+        const toggleUrlInputBtn = document.getElementById('toggleUrlInputBtn');
+        const urlInputContent = document.getElementById('urlInputContent');
+        const toastContainer = document.getElementById('toastContainer'); // ថ្មី
+
+        let people = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+
+        // ថ្មី៖ មុខងារបង្ហាញ Toast Notification
+        const showToast = (message, type = 'error', duration = 5000) => {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            toastContainer.appendChild(toast);
+            
+            // Show the toast
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+
+            // Hide and remove the toast
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    toastContainer.removeChild(toast);
+                }, 500); // Wait for transition to complete
+            }, duration);
+        };
+
+        /**
+         * Parses a CSV string into an array of objects.
+         */
+        function parseCSV(csvText) {
+            try {
+                const lines = csvText.split('\n');
+                if (lines.length === 0) return [];
+                
+                // ការកែសម្រួល៖ ប្រើ regular expression ដើម្បីរាប់បញ្ចូលនូវ commas នៅក្នុង quotes
+                const parseLine = (line) => {
+                    const result = [];
+                    let current = '';
+                    let inQuotes = false;
+                    
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === ',' && !inQuotes) {
+                            result.push(current.trim().replace(/^"|"$/g, '')); // Trim and remove surrounding quotes
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    result.push(current.trim().replace(/^"|"$/g, ''));
+                    return result;
+                };
+
+                const headers = parseLine(lines[0]);
+                const data = [];
+
+                const requiredKeys = ["លេខរៀង", "គោត្តនាម នាម", "ផ្សេងៗ"];
+                
+                // Check if CSV has the required headers
+                const hasAllKeys = requiredKeys.every(key => headers.includes(key));
+                if (!hasAllKeys) {
+                    console.error("CSV Headers មិនត្រឹមត្រូវ! ត្រូវតែមាន: ", requiredKeys.join(', '));
+                    console.error("CSV Headers ដែលមាន: ", headers.join(', '));
+                    return null; 
+                }
+
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
+                    
+                    const values = parseLine(lines[i]);
+                    if (values.length !== headers.length) {
+                        // ពេលខ្លះ Google Sheet បង្កើតជួរឈរទទេច្រើនពេក
+                        // យើងអនុញ្ញាតឲ្យ length តិចជាង headers បាន ដោយគ្រាន់តែបំពេញដោយទទេ
+                        while (values.length < headers.length) {
+                            values.push('');
+                        }
+                    }
+
+                    const entry = {};
+                    
+                    headers.forEach((header, index) => {
+                        entry[header] = values[index] || '';
+                    });
+                    
+                    data.push(entry);
+                }
+                return data;
+            } catch (error) {
+                console.error("Error parsing CSV: ", error);
+                return null;
+            }
+        }
+
+        // Function to render the table with search filtering and pagination
+        const renderTable = (data) => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filteredData = data.filter(person =>
+                person["គោត្តនាម នាម"] && person["គោត្តនាម នាម"].toLowerCase().includes(searchTerm)
+            );
+
+            // Pagination logic
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedData = filteredData.slice(startIndex, endIndex);
+
+            personTableBody.innerHTML = '';
+            if (filteredData.length === 0) {
+                noDataMessage.classList.remove('hidden');
+            } else {
+                noDataMessage.classList.add('hidden');
+            }
+
+            paginatedData.forEach((person) => {
+                const row = `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-4">${person["លេខរៀង"] || ''}</td>
+                        <td class="p-4">${person["គោត្តនាម នាម"] || ''}</td>
+                        <td class="p-4">${person["ផ្សេងៗ"] || ''}</td>
+                    </tr>
+                `;
+                personTableBody.innerHTML += row;
+            });
+
+            // Update pagination buttons and info
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            prevPageBtn.disabled = currentPage === 1;
+            nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+            pageInfo.textContent = `ទំព័រ ${currentPage} នៃ ${totalPages === 0 ? 1 : totalPages}`;
+        };
+
+        // Function to switch between pages
+        const showPage = (pageId) => {
+            homePageContent.classList.add('hidden');
+            page2Content.classList.add('hidden');
+
+            if (pageId === 'home') {
+                homePageContent.classList.remove('hidden');
+                currentPage = 1; // Reset to page 1 when returning home
+                renderTable(people);
+            } else if (pageId === 'page2') {
+                page2Content.classList.remove('hidden');
+            }
+        };
+
+        // --- Event Listeners ---
+        
+        // មុខងារលាក់/បង្ហាញ URL Input
+        toggleUrlInputBtn.addEventListener('click', () => {
+            const isHidden = urlInputContent.classList.toggle('hidden');
+            if (isHidden) {
+                toggleUrlInputBtn.textContent = 'បង្ហាញ';
+            } else {
+                toggleUrlInputBtn.textContent = 'លាក់';
+            }
+        });
+
+
+        loadDataBtn.addEventListener('click', async () => {
+            const url = sheetUrlInput.value.trim();
+            if (!url) {
+                showToast("សូមបញ្ចូល Google Sheet CSV URL ជាមុនសិន។", 'error');
+                return;
+            }
+
+            // Show loading state
+            loadDataBtnText.classList.add('hidden');
+            loadDataSpinner.classList.remove('hidden');
+            loadDataBtn.disabled = true;
+
+            try {
+                // ទាញទិន្នន័យដោយផ្ទាល់ពី URL
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok. Status: ${response.status} ${response.statusText}`);
+                }
+
+                const csvText = await response.text();
+
+                // --- ត្រួតពិនិត្យថា តើទិន្នន័យដែលទាញបានជា HTML ឬ CSV? ---
+                if (csvText.trim().toLowerCase().startsWith('<!doctype html>') || csvText.trim().toLowerCase().startsWith('<html')) {
+                    throw new Error("URL មិនត្រឹមត្រូវ។ សូមប្រាកដថាអ្នកប្រើតំណរ 'CSV' ដែលបាន Publish ពី Google Sheet (មិនមែនតំណរមើល HTML ទេ)។");
+                }
+                
+                const parsedData = parseCSV(csvText);
+                
+                if (parsedData) {
+                    people = parsedData;
+                    currentPage = 1;
+                    renderTable(people);
+                    showToast("ទាញយកទិន្នន័យបានជោគជ័យ! ចំនួនធាតុ៖ " + people.length, 'success');
+                    console.log("Data loaded successfully:", people);
+                } else {
+                    showToast("មិនអាចទាញទិន្នន័យបានទេ។ សូមពិនិត្យ CSV headers (ត្រូវតែមាន 'លេខរៀង', 'គោត្តនាម នាម', 'ផ្សេងៗ')។", 'error', 7000);
+                    people = []; // Clear data
+                    renderTable(people);
+                }
+
+            } catch (error) {
+                console.error("Error fetching or parsing data: ", error);
+                
+                let userMessage = error.message;
+
+                // ធ្វើឲ្យ message កាន់តែច្បាស់លាស់ ដោយសំដៅទៅលើកំហុស URL ជាក់លាក់
+                if (userMessage.includes("URL មិនត្រឹមត្រូវ")) {
+                     userMessage = `មានកំហុស៖ URL មិនត្រឹមត្រូវ។ វាត្រូវតែជាតំណរ CSV ដែលចេញពី 'Publish to web'។`;
+                } else if (userMessage.includes("Network response was not ok")) {
+                     userMessage = `មានកំហុសក្នុងការទាញទិន្នន័យ៖ ${userMessage}។ សូមពិនិត្យថា Google Sheet ត្រូវបាន Publish ជា CSV រួចរាល់។`;
+                } else {
+                    userMessage = `មានកំហុសក្នុងការទាញទិន្នន័យ។ Error: ${userMessage}`;
+                }
+
+                showToast(userMessage, 'error', 10000); // Display error for 10 seconds
+                people = []; // Clear data
+                renderTable(people);
+            } finally {
+                // Hide loading state
+                loadDataBtnText.classList.remove('hidden');
+                loadDataSpinner.classList.add('hidden');
+                loadDataBtn.disabled = false;
+            }
+        });
+
+        // Search and pagination event listeners
+        searchInput.addEventListener('input', () => {
+            currentPage = 1;
+            renderTable(people);
+        });
+
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            currentPage = 1;
+            renderTable(people);
+        });
+
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable(people);
+            }
+        });
+
+        nextPageBtn.addEventListener('click', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filteredData = people.filter(person =>
+                person["គោត្តនាម នាម"] && person["គោត្តនាម នាម"].toLowerCase().includes(searchTerm)
+            );
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable(people);
+            }
+        });
+
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = homePageContent.classList.toggle('hidden');
+            page2Content.classList.toggle('hidden', isHidden);
+
+            if (homePageContent.classList.contains('hidden')) {
+                toggleBtn.textContent = 'បង្ហាញ';
+            } else {
+                toggleBtn.textContent = 'លាក់';
+            }
+        });
+
+        // Navigation links
+        homePageLink.addEventListener('click', () => showPage('home'));
+        page2Link.addEventListener('click', () => showPage('page2'));
+        goBackBtn.addEventListener('click', () => showPage('home'));
+
+        // --- HTML Report Generation ---
+        generateReportBtn.addEventListener('click', () => {
+            if (people.length === 0) {
+                showToast('មិនមានទិន្នន័យដើម្បីបង្កើតរបាយការណ៍ទេ!', 'error');
+                return;
+            }
+            
+            const reportHtml = `
+                <!DOCTYPE html>
+                <html lang="km">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>របាយការណ៍ព័ត៌មានមនុស្ស</title>
+                    <style>
+                        body { font-family: 'Noto Sans Khmer', sans-serif; margin: 2rem; }
+                        h1 { font-family: 'Moul', cursive; text-align: center; margin-bottom: 2rem; } 
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+                        th { background-color: #f2f2f2; }
+                    </style>
+                    <link rel="preconnect" href="https://fonts.googleapis.com">
+                    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                    <link href="https://fonts.googleapis.com/css2?family=Moul&family=Noto+Sans+Khmer:wght@400;500;700&display=swap" rel="stylesheet">
+                </head>
+                <body>
+                    <h1>របាយការណ៍ព័ត៌មានមនុស្ស</h1>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>លេខរៀង</th>
+                                <th>គោត្តនាម នាម</th>
+                                <th>ផ្សេងៗ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${people.map((person) => `
+                                <tr>
+                                    <td>${person["លេខរៀង"] || ''}</td>
+                                    <td>${person["គោត្តនាម នាម"] || ''}</td>
+                                    <td>${person["ផ្សេងៗ"] || ''}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([reportHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'របាយការណ៍ព័ត៌មានមនុស្ស.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('បានបង្កើតរបាយការណ៍ HTML រួចរាល់។', 'success', 3000);
+        });
+
+        // --- CSV Export Generation ---
+        exportCsvBtn.addEventListener('click', () => {
+            if (people.length === 0) {
+                showToast('មិនមានទិន្នន័យដើម្បីទាញយកទេ!', 'error');
+                return;
+            }
+            
+            // Define CSV headers
+            const headers = ["លេខរៀង", "គោត្តនាម នាម", "ផ្សេងៗ"];
+            const csvRows = [headers.join(',')];
+
+            // Add data rows
+            people.forEach(person => {
+                // ប្រើ JSON.stringify ដើម្បីរុំ values ទាំងអស់ក្នុង double quotes សម្រាប់ភាពត្រឹមត្រូវក្នុង CSV
+                const row = [
+                    JSON.stringify(person["លេខរៀង"] || ''), 
+                    JSON.stringify(person["គោត្តនាម នាម"] || ''), 
+                    JSON.stringify(person["ផ្សេងៗ"] || '')
+                ].join(',');
+                csvRows.push(row);
+            });
+
+            const csvString = csvRows.join('\n');
+            // បន្ថែម BOM សម្រាប់ UTF-8 ក្នុង Excel
+            const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'ទិន្នន័យមនុស្ស.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showToast('បានទាញយកទិន្នន័យជា CSV រួចរាល់។', 'success', 3000);
+        });
+
+        // Initial render on load
+        renderTable(people);
+    </script>
+</body>
+</html>
